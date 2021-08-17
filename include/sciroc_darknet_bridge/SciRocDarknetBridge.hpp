@@ -29,6 +29,8 @@
 #include "sciroc_objdet/ObjectClassificationAction.h"
 #include "sciroc_objdet/ObjectComparisonAction.h"
 
+// Tiago
+
 // C++
 #include <pthread.h>
 #include <chrono>
@@ -56,6 +58,15 @@ class SciRocDarknetBridge
 		/* -- METHODS -- */
 		
 		void waitForServer();
+		/*
+			Subscribe to the camera topic and keep track of the latest
+			image received (which will be sent to the darknet_ros_as)
+		*/
+		void cameraCallback(const sensor_msgs::ImageConstPtr &msg);
+
+		std::vector<float> retrieveTablePos();
+		void moveHead();
+
 		/*	SciRoc ObjDet Action Server side	*/
 		void goalCB();
 		void preemptCB();
@@ -64,12 +75,6 @@ class SciRocDarknetBridge
 		/*	Darknet_ROS Action Client side	*/
 		void sendGoal();
 		void clockCB(const ros::TimerEvent&);
-
-		/*
-			Subscribe to the camera topic and keep track of the latest
-			image received (which will be sent to the darknet_ros_as)
-		*/
-		void cameraCallback(const sensor_msgs::ImageConstPtr &msg);
 
 		/* -- MEMBERS -- */
 		ros::NodeHandle node_handle_;
@@ -98,6 +103,21 @@ class SciRocDarknetBridge
 			Base template class, needs to be implemented by the three different ActionServers
 			The client part will be the same, but the resultCB will be pure virtual
 		*/
+
+		/* Head Moving */
+		std::thread move_head_thread;
+		bool isHeadMoving
+
+		enum class AcquisitionStatus
+		{
+			START, // set by the GoalCB
+			ONGOING,	// set at the start of move_head_thread
+			END,	// set at the end of move_head_thread
+			NONE	// if no image is currently being detected
+		};
+		
+		AcquisitionStatus acquisition_status_;
+		boost::shared_mutex mutexAcquisitionStatus_;
 };
 } // namespace
 #endif // SCIROC_DARKNET_BRIDGE_H
