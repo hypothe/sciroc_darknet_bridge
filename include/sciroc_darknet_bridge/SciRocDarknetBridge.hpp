@@ -15,7 +15,7 @@
 #include <actionlib/client/terminal_state.h>
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/simple_action_client.h>
-//#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Point.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
@@ -57,38 +57,43 @@ class SciRocDarknetBridge
 	private:
 		/* -- METHODS -- */
 		
-		void waitForServer();
+		void waitForServer(std::string server_name);
 		/*
 			Subscribe to the camera topic and keep track of the latest
 			image received (which will be sent to the darknet_ros_as)
 		*/
 		void cameraCallback(const sensor_msgs::ImageConstPtr &msg);
 
-		std::vector<float> retrieveTablePos();
-		void moveHead();
+		geometry_msgs::Point retrieveTablePos();
+		void moveHead(geometry_msgs::Point table_pos);
 
 		/*	SciRoc ObjDet Action Server side	*/
 		void goalCB();
+		virtual void saveGoalData() = 0;
 		void preemptCB();
-		virtual void resultCB() = 0; // has to be implemented by the specific subclasses
-		
+		void resultCB();
+		virtual void fillResult() = 0; // has to be implemented by the specific subclasses
+
 		/*	Darknet_ROS Action Client side	*/
 		void sendGoal();
-		void clockCB(const ros::TimerEvent&);
+		void yoloDoneCB(const actionlib::SimpleClientGoalState &state, const darknet_ros_msgs::CheckForObjectsResultConstPtr &result);
+		void clockCB(const ros::TimerEvent &);
 
 		/* -- MEMBERS -- */
 		ros::NodeHandle node_handle_;
 
 		typedef actionlib::SimpleActionServer<T> ASType;
 		typedef std::shared_ptr<ASType> ASTypePtr;
-		typedef std::shared_ptr<actionlib::SimpleActionClient<darknet_ros_msgs::CheckForObjectsAction> > ACTypePtr;
+		typedef actionlib::SimpleActionClient<darknet_ros_msgs::CheckForObjectsAction> ACType;
+		typedef std::shared_ptr<ACType> ACTypePtr;
 
 		std::string as_name_;
 		ASTypePtr as_; //-> generic ActionServer
 		ACTypePtr ac_; //-> darknet_ros ActionClient
+		const int maxFailedConnectionAttempts = 60;
 		ros::Timer as_clock;
 		const double as_clock_period = 0.2; // expect a reply 5 times per second, adjust if need be
-		
+		int clock_lost_callbacks;
 		// Camera readings
 		std::shared_ptr<image_transport::ImageTransport> it;
 		std::shared_ptr<image_transport::Subscriber> camera_sub_;
@@ -98,7 +103,10 @@ class SciRocDarknetBridge
 		 or modifying it (unique_lock)
 		*/
 		sensor_msgs::Image current_img_;
-		boost::shared_mutex mutexCurrentImage_; 
+		boost::shared_mutex mutexCurrentImage_;
+		int image_sent_id_;
+		int image_detected_id_;
+		boost::shared_mutex mutexImageDetectedId_;
 		/*
 			Base template class, needs to be implemented by the three different ActionServers
 			The client part will be the same, but the resultCB will be pure virtual
@@ -118,6 +126,8 @@ class SciRocDarknetBridge
 		
 		AcquisitionStatus acquisition_status_;
 		boost::shared_mutex mutexAcquisitionStatus_;
+
+		std::vector<darknet_ros_msgs::BoundingBoxes> detectedBoxes;
 };
 } // namespace
 #endif // SCIROC_DARKNET_BRIDGE_H

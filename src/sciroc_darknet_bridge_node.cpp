@@ -14,8 +14,8 @@ class EnumBridge : public EnumAS
 		EnumBridge(ros::NodeHandle nh_, std::string action_server_name)
 		: EnumAS(nh_, action_server_name){}
 	private:
-		void resultCB()
-	{}
+		void resultCB(){}
+		void saveGoalData(){}
 };
 
 int main(int argc, char** argv) {

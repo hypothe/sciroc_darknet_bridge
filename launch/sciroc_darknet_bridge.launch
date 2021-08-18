@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<arg name="synthetic_camer_topic" value="/xtion/rgb/image_raw">
+<arg name="use_synthetic_camera" value="TRUE">
+
+<launch>
+	<node pkg="sciroc_darknet_bridge" ns="sciroc_darknet_bridge" name="sciroc_darknet_bridge" output="screen">
+		<param name="subscribers/camera_reading/topic" value="$(arg synthetic_camer_topic)" if="$(arg use_synthetic_camera)">
+	</node>
+
+</lauch>
