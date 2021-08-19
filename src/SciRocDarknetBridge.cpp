@@ -17,6 +17,15 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	std::string checkForObjectsActionName;
   node_handle_.param("actions/camera_reading/topic", checkForObjectsActionName, std::string("/darknet_ros_as/check_for_objects"));
 	ac_ = std::make_shared<ACType>(checkForObjectsActionName, true);
+	// Head movement ActionClient
+	std::string headMovementActionName;
+  node_handle_.param("objdet/specs/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
+	head_movement_ac_ = std::make_shared<HeadACType>(checkForObjectsActionName, true);
+	node_handle_.param("objdet/specs/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
+	node_handle_.param("objdet/specs/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
+	node_handle_.param("objdet/specs/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
+	node_handle_.param("objdet/specs/head_movement/max_velocity", common_head_movement_traits_.max_velocity, double(2.0));
+	common_head_movement_traits_.pointing_axis.z = 1.0;
 	// ActionServer
 	as_->registerGoalCallback(boost::bind(&SciRocDarknetBridge<T>::goalCB, this));
 	as_->registerPreemptCallback(boost::bind(&SciRocDarknetBridge<T>::preemptCB, this));
@@ -41,6 +50,7 @@ SciRocDarknetBridge<T>::~SciRocDarknetBridge()
 	as_->shutdown();
 	// ActionClient
 	ac_->stopTrackingGoal();
+	head_movement_ac_->stopTrackingGoal();
 	// Clock
 	as_clock.stop();
 	// Thread
@@ -88,8 +98,6 @@ geometry_msgs::Point SciRocDarknetBridge<T>::retrieveTablePos()
 template <typename T>
 void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thread
 {
-	/*	this will be runned in a thread	*/
-	/*	Temporary definition!	*/
 	// ask to an action server to move the downward then upward
 	{
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
@@ -100,11 +108,13 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 	look_up.z += 0.1;
 	geometry_msgs::Point look_down = table_pos;
 	look_down.z -= 0.1;
+	// Sequence of points for a "down - up - back to start" movement
 	std::vector<geometry_msgs::Point> look_points {look_down, table_pos, look_up, table_pos};
+	control_msgs::PointHeadGoal head_goal = common_head_movement_traits_;
 	for (auto point : look_points)
 	{
-		// TODO: actually call the server
-		std::this_thread::sleep_for(1.5s);
+		head_goal.target.point = point;
+		head_movement_ac_->sendGoalAndWait(head_goal);
 	}
 	//
 	{
@@ -147,6 +157,10 @@ template <typename T>
 void SciRocDarknetBridge<T>::preemptCB()
 {
 	as_clock.stop();
+	{
+		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
+    acquisition_status_ = AcquisitionStatus::NONE;
+	}
 	ROS_DEBUG("[%s] preemption request received.", as_name_.c_str());
 
 	ac_->cancelAllGoals();

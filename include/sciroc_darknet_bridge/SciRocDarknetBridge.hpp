@@ -30,6 +30,7 @@
 #include "sciroc_objdet/ObjectComparisonAction.h"
 
 // Tiago
+#include "control_msgs/PointHeadAction.h"
 
 // C++
 #include <pthread.h>
@@ -44,6 +45,7 @@
 
 namespace sciroc_darknet_bridge
 {
+
 template <typename T>
 class SciRocDarknetBridge
 {
@@ -93,7 +95,8 @@ class SciRocDarknetBridge
 		typedef std::shared_ptr<ASType> ASTypePtr;
 		typedef actionlib::SimpleActionClient<darknet_ros_msgs::CheckForObjectsAction> ACType;
 		typedef std::shared_ptr<ACType> ACTypePtr;
-
+		typedef actionlib::SimpleActionClient<control_msgs::PointHeadAction> HeadACType;
+		typedef std::shared_ptr<HeadACType> HeadACTypePtr;
 
 		std::string as_name_;
 		ASTypePtr as_; //-> generic ActionServer
@@ -122,6 +125,8 @@ class SciRocDarknetBridge
 
 		/* Head Moving */
 		std::thread move_head_thread;
+		HeadACTypePtr head_movement_ac_;
+		control_msgs::PointHeadGoal common_head_movement_traits_;
 		// bool isHeadMoving;
 
 		enum class AcquisitionStatus
