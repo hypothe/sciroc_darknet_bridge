@@ -52,8 +52,18 @@ class SciRocDarknetBridge
 		// static_assert(std::is_base_of<BaseClass, Derived>::value, "Derived not derived from BaseClass");
 		~SciRocDarknetBridge();
 
-	// 1 generic SciRoc actionserver
-	// 1 Darknet_ROS actionclient
+	protected:
+		/* -- METHODS -- */
+		
+		virtual void saveGoalDataImp() = 0;
+		virtual void setResultImp() = 0; // has to be implemented by the specific subclasses
+		
+		/* -- MEMBERS -- */
+		
+		ros::NodeHandle node_handle_;
+		T action_;
+		std::vector<darknet_ros_msgs::BoundingBoxes> detectedBoxes;
+
 	private:
 		/* -- METHODS -- */
 		
@@ -69,10 +79,8 @@ class SciRocDarknetBridge
 
 		/*	SciRoc ObjDet Action Server side	*/
 		void goalCB();
-		virtual void saveGoalData() = 0;
 		void preemptCB();
 		void resultCB();
-		virtual void fillResult() = 0; // has to be implemented by the specific subclasses
 
 		/*	Darknet_ROS Action Client side	*/
 		void sendGoal();
@@ -80,12 +88,12 @@ class SciRocDarknetBridge
 		void clockCB(const ros::TimerEvent &);
 
 		/* -- MEMBERS -- */
-		ros::NodeHandle node_handle_;
 
 		typedef actionlib::SimpleActionServer<T> ASType;
 		typedef std::shared_ptr<ASType> ASTypePtr;
 		typedef actionlib::SimpleActionClient<darknet_ros_msgs::CheckForObjectsAction> ACType;
 		typedef std::shared_ptr<ACType> ACTypePtr;
+
 
 		std::string as_name_;
 		ASTypePtr as_; //-> generic ActionServer
@@ -114,7 +122,7 @@ class SciRocDarknetBridge
 
 		/* Head Moving */
 		std::thread move_head_thread;
-		bool isHeadMoving
+		// bool isHeadMoving;
 
 		enum class AcquisitionStatus
 		{
@@ -127,7 +135,6 @@ class SciRocDarknetBridge
 		AcquisitionStatus acquisition_status_;
 		boost::shared_mutex mutexAcquisitionStatus_;
 
-		std::vector<darknet_ros_msgs::BoundingBoxes> detectedBoxes;
 };
 } // namespace
 #endif // SCIROC_DARKNET_BRIDGE_H

@@ -119,7 +119,7 @@ void SciRocDarknetBridge<T>::goalCB()
 	// start the clock
 	ROS_INFO("[%s]: new goal received.", as_name_.c_Str());
 	// Pure virtual goal function, which can be used to store data received in the goal field
-	saveGoalData();
+	saveGoalDataImp();
 
 	{
 		boost::unique_lock<boost::shared_mutex> lockImageDetectedId(mutexImageDetectedId_);
@@ -175,11 +175,14 @@ void SciRocDarknetBridge<T>::sendGoal()
 template <typename T>
 void SciRocDarknetBridge<T>::yoloDoneCB(const actionlib::SimpleClientGoalState &state, const darknet_ros_msgs::CheckForObjectsResultConstPtr &result)
 {
+	if (state.state_ == actionlib::SimpleClientGoalState::SUCCEEDED)
 	{
 		boost::unique_lock<boost::shared_mutex> lockImageDetectedId(mutexImageDetectedId_);
 		image_detected_id_ = result->id; // update the id of the last received image
+		detectedBoxes.push_back(result->bounding_boxes);
 	}
-	detectedBoxes.push_back(result->bounding_boxes);
+	else
+		ROS_DEBUG("[%s]: yolo detection returned failed state %s", as_name_, state.getText());
 }
 
 template <typename T>
@@ -196,10 +199,10 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 		ROS_WARN("Clock callback called while no acquisition is running.\n"
 							"The clock might be running longer than it should.");
 		break;
-	case Acquisition::START:
+	case AcquisitionStatus::START:
 		ROS_DEBUG("Clock callback before head movement started");
 		break;
-	case Acquisition::ONGOING:
+	case AcquisitionStatus::ONGOING:
 		/*	check if the previous has returned*/
 		int tmp_last_detected_image_id;
 		{
@@ -221,8 +224,9 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 		// YES -> get new image and send it
 		// NO -> skip this image (keep a counter on the number of failed calls for debugging)
 		break;
-	case Acquisition::END:
+	case AcquisitionStatus::END:
 		/*	call the response CB	*/
+		ROS_DEBUG("[%s]: head movement ended, calling the resultCB", as_name_);
 		resultCB();
 		break;
 	default:
@@ -246,7 +250,12 @@ void SciRocDarknetBridge<T>:: resultCB()
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::NONE;
 	}
-	fillResult(); // to be implemented in the children classes
+	/* 	in this function, to be implemented in the children,
+			fill a result var appropriately and publish it.
+		
+	*/
+	setResultImp(); // to be implemented in the children classes
+	as_->setSucceeded(action_.action_result.result);
 	//as_->setSucceeded(result_);
 	// TODO: how to correctly declare the result
 }
