@@ -1,6 +1,6 @@
 #include "sciroc_darknet_bridge/SciRocDarknetBridge.hpp"
 
-using namespace std::chrono_literals;
+using namespace std::literals::chrono_literals;
 
 namespace sciroc_darknet_bridge
 {
@@ -19,7 +19,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	ac_ = std::make_shared<ACType>(checkForObjectsActionName, true);
 	// ActionServer
 	as_->registerGoalCallback(boost::bind(&SciRocDarknetBridge<T>::goalCB, this));
-	as_->registerPreemptCallback(boost::bind(&SciRocDarknetBridge<T>::preemptCB, this);
+	as_->registerPreemptCallback(boost::bind(&SciRocDarknetBridge<T>::preemptCB, this));
 	// Subscriber
 	std::string cameraTopicName;
 	int cameraQueueSize;
@@ -42,7 +42,7 @@ SciRocDarknetBridge<T>::~SciRocDarknetBridge()
 	// ActionClient
 	ac_->stopTrackingGoal();
 	// Clock
-	as_clock->stop();
+	as_clock.stop();
 	// Thread
 	if (move_head_thread.joinable())
 		move_head_thread.join();
@@ -53,15 +53,15 @@ template <typename T>
 void SciRocDarknetBridge<T>::waitForServer(std::string server_name)
 {
 	int failedConnectionAttempt = 0;
-	while (!ac_->waitForServer(ros::Duration(1s)) && failedConnectionAttempt)
+	while (!ac_->waitForServer(ros::Duration(1.0)) && failedConnectionAttempt)
 	{
-		ROS_WARN("Waiting for Action Server %s", server_name);
+		ROS_WARN("Waiting for Action Server %s", server_name.c_str());
 		failedConnectionAttempt++;
 	}
 	if (failedConnectionAttempt > maxFailedConnectionAttempts)
 	{
 		ROS_ERROR("NO SERVER %s FOUND AFTER %d attempts, shutting down.", \
-							server_name.c_Str(), maxFailedConnectionAttempts);
+							server_name.c_str(), maxFailedConnectionAttempts);
 		node_handle_.shutdown();
 	}
 	return ;
@@ -72,7 +72,9 @@ template <typename T>
 void SciRocDarknetBridge<T>::cameraCallback(const sensor_msgs::ImageConstPtr &msg)
 {
 	boost::unique_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
-	current_img_ = msg.get(); // update the last stored frame
+
+	current_img_ = *msg;
+	//.get(); // update the last stored frame
 }
 
 template <typename T>
@@ -117,7 +119,7 @@ void SciRocDarknetBridge<T>::goalCB()
 {
 	// start moving the head
 	// start the clock
-	ROS_INFO("[%s]: new goal received.", as_name_.c_Str());
+	ROS_INFO("[%s]: new goal received.", as_name_.c_str());
 	// Pure virtual goal function, which can be used to store data received in the goal field
 	saveGoalDataImp();
 
@@ -137,7 +139,7 @@ void SciRocDarknetBridge<T>::goalCB()
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::START;
 	}
-	move_head_thread = std::thread(&SciRocDarknetBridge<T>::moveHead, retrieveTablePos(), this);
+	move_head_thread = std::thread(&SciRocDarknetBridge<T>::moveHead, this, retrieveTablePos());
 
 	as_clock.start();
 }
@@ -152,7 +154,7 @@ void SciRocDarknetBridge<T>::preemptCB()
   {
     ros::Duration(0.1).sleep();
   }
-  as_.setPreempted();
+  as_->setPreempted();
 
 	detectedBoxes.clear();
 }
@@ -161,14 +163,14 @@ void SciRocDarknetBridge<T>::preemptCB()
 template <typename T>
 void SciRocDarknetBridge<T>::sendGoal()
 {
-	darknet_ros_msgs::CheckForObjectsActionGoal goal;
+	darknet_ros_msgs::CheckForObjectsGoal goal;
 	{
 		boost::shared_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
-		goal.goal.image = current_img_; // retrieve last image perceived
+		goal.image = current_img_; // retrieve last image perceived
 	}
-	goal.goal.id = curent_id_;
+	goal.id = image_sent_id_;
 
-	ac_->sendGoal(goal, boost::bind(&SciRocDarknetBridge<T>::yoloDoneCB, std::placeholders::_1, std::placeholders::_2, this),
+	ac_->sendGoal(goal, boost::bind(&SciRocDarknetBridge<T>::yoloDoneCB, this, _1, _2),
 								ACType::SimpleActiveCallback(), ACType::SimpleFeedbackCallback());
 }
 
@@ -182,7 +184,7 @@ void SciRocDarknetBridge<T>::yoloDoneCB(const actionlib::SimpleClientGoalState &
 		detectedBoxes.push_back(result->bounding_boxes);
 	}
 	else
-		ROS_DEBUG("[%s]: yolo detection returned failed state %s", as_name_, state.getText());
+		ROS_DEBUG("[%s]: yolo detection returned failed state %s", as_name_.c_str(), state.getText().c_str());
 }
 
 template <typename T>
@@ -226,7 +228,7 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 		break;
 	case AcquisitionStatus::END:
 		/*	call the response CB	*/
-		ROS_DEBUG("[%s]: head movement ended, calling the resultCB", as_name_);
+		ROS_DEBUG("[%s]: head movement ended, calling the resultCB", as_name_.c_str());
 		resultCB();
 		break;
 	default:
