@@ -64,7 +64,8 @@ class SciRocDarknetBridge
 		
 		ros::NodeHandle node_handle_;
 		T action_;
-		std::vector<darknet_ros_msgs::BoundingBoxes> detectedBoxes;
+		std::vector<std::vector<darknet_ros_msgs::BoundingBox> > detectedBoxes;
+		float det_threshold_;
 
 	private:
 		/* -- METHODS -- */
@@ -108,7 +109,7 @@ class SciRocDarknetBridge
 		// Camera readings
 		std::shared_ptr<image_transport::ImageTransport> it;
 		std::shared_ptr<image_transport::Subscriber> camera_sub_;
-		
+
 		// Image 
 		/* use this to access the image for reading it (shared_lock)
 		 or modifying it (unique_lock)

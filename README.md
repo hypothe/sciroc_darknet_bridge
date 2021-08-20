@@ -6,9 +6,9 @@ Interface between the ObjDet SciRoc ROS package and the darknet_ros ROS package.
 - Aug, 19: 
 	- [x] Complete the general SciRocDarknetBridge class definition
 - Aug, 20:
-	- [ ] Write the config file with values used by the class
-	- [ ] Script a simple component to periodically publish an image as if it were a video stream
-	- [ ] Write the remaining two children/implementation of the generic bridge Action Server
+	- [x] Write the config file with values used by the class
+	- [x] Script a simple component to periodically publish an image as if it were a video stream
+	- [x] Write the remaining two children/implementation of the generic bridge Action Server
 - Aug, 21:
 	- [ ] Run tests on the whole infrastructure
 	- [ ] Fix emerged issues in the bridge

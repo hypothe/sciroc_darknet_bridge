@@ -11,6 +11,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
 	image_sent_id_(0), image_detected_id_(0)
 {
+	node_handle_.param("objdet/detection/threshold/yolo", det_threshold_, float(0));
 	// Clock
 	as_clock = node_handle_.createTimer(ros::Duration(as_clock_period), &SciRocDarknetBridge<T>::clockCB, this, false, false);
 	// ActionClient
@@ -19,12 +20,12 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	ac_ = std::make_shared<ACType>(checkForObjectsActionName, true);
 	// Head movement ActionClient
 	std::string headMovementActionName;
-  node_handle_.param("objdet/specs/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
+  node_handle_.param("objdet/actions/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
 	head_movement_ac_ = std::make_shared<HeadACType>(checkForObjectsActionName, true);
-	node_handle_.param("objdet/specs/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
-	node_handle_.param("objdet/specs/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
-	node_handle_.param("objdet/specs/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
-	node_handle_.param("objdet/specs/head_movement/max_velocity", common_head_movement_traits_.max_velocity, double(2.0));
+	node_handle_.param("objdet/actions/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
+	node_handle_.param("objdet/actions/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
+	node_handle_.param("objdet/actions/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
+	node_handle_.param("objdet/actions/head_movement/max_velocity", common_head_movement_traits_.max_velocity, double(2.0));
 	common_head_movement_traits_.pointing_axis.z = 1.0;
 	// ActionServer
 	as_->registerGoalCallback(boost::bind(&SciRocDarknetBridge<T>::goalCB, this));
@@ -32,8 +33,8 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	// Subscriber
 	std::string cameraTopicName;
 	int cameraQueueSize;
-	node_handle_.param("subscribers/camera_reading/topic", cameraTopicName, std::string("/camera/image_raw"));
-	node_handle_.param("subscribers/camera_reading/queue_size", cameraQueueSize, 1);
+	node_handle_.param("objdet/subscribers/camera_reading/topic", cameraTopicName, std::string("/camera/image_raw"));
+	node_handle_.param("objdet/subscribers/camera_reading/queue_size", cameraQueueSize, 1);
 	it = std::make_shared<image_transport::ImageTransport>(node_handle_);
 	// Start the components
 	camera_sub_ = std::make_shared<image_transport::Subscriber>(it->subscribe(cameraTopicName, cameraQueueSize,
@@ -131,7 +132,13 @@ void SciRocDarknetBridge<T>::goalCB()
 	// start the clock
 	ROS_INFO("[%s]: new goal received.", as_name_.c_str());
 	// Pure virtual goal function, which can be used to store data received in the goal field
+	action_.action_goal.goal = *(as_->acceptNewGoal());
 	saveGoalDataImp();
+
+	if (as_->isPreemptRequested())
+	{
+		preemptCB();
+	}
 
 	{
 		boost::unique_lock<boost::shared_mutex> lockImageDetectedId(mutexImageDetectedId_);
@@ -193,9 +200,18 @@ void SciRocDarknetBridge<T>::yoloDoneCB(const actionlib::SimpleClientGoalState &
 {
 	if (state.state_ == actionlib::SimpleClientGoalState::SUCCEEDED)
 	{
-		boost::unique_lock<boost::shared_mutex> lockImageDetectedId(mutexImageDetectedId_);
-		image_detected_id_ = result->id; // update the id of the last received image
-		detectedBoxes.push_back(result->bounding_boxes);
+		{
+			boost::unique_lock<boost::shared_mutex> lockImageDetectedId(mutexImageDetectedId_);
+			image_detected_id_ = result->id; // update the id of the last received image
+		}
+		// TODO: should I move this at the end? Does it slow down the callback?
+		std::vector<darknet_ros_msgs::BoundingBox> th_boxes;
+		for (auto box : result->bounding_boxes.bounding_boxes)
+		{
+			if (box.probability > det_threshold_)
+				th_boxes.push_back(box);
+		}
+		detectedBoxes.push_back(th_boxes);
 	}
 	else
 		ROS_DEBUG("[%s]: yolo detection returned failed state %s", as_name_.c_str(), state.getText().c_str());
