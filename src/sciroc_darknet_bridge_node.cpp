@@ -113,8 +113,8 @@ class CompBridge : public CompAS
 };
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "sciroc_darknet_bridge");
-  ros::NodeHandle nodeHandle("~");
+  ros::init(argc, argv, "sciroc_darknet_bridge_node");
+  ros::NodeHandle nodeHandle;
   EnumBridge enum_bridge(nodeHandle, "bridge_as");
 
   ros::spin();
