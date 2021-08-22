@@ -102,7 +102,7 @@ class SciRocDarknetBridge
 		std::string as_name_;
 		ASTypePtr as_; //-> generic ActionServer
 		ACTypePtr ac_; //-> darknet_ros ActionClient
-		const int maxFailedConnectionAttempts = 60;
+		const int maxFailedConnectionAttempts = 120;
 		ros::Timer as_clock;
 		const double as_clock_period = 0.2; // expect a reply 5 times per second, adjust if need be
 		int clock_lost_callbacks;

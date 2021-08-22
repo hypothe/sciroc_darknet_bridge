@@ -21,7 +21,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	// Head movement ActionClient
 	std::string headMovementActionName;
   node_handle_.param("objdet/actions/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
-	head_movement_ac_ = std::make_shared<HeadACType>(checkForObjectsActionName, true);
+	head_movement_ac_ = std::make_shared<HeadACType>(headMovementActionName, true);
 	node_handle_.param("objdet/actions/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
 	node_handle_.param("objdet/actions/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
 	node_handle_.param("objdet/actions/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
@@ -40,6 +40,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	camera_sub_ = std::make_shared<image_transport::Subscriber>(it->subscribe(cameraTopicName, cameraQueueSize,
 																																						&SciRocDarknetBridge<T>::cameraCallback, this));
 	waitForServer(checkForObjectsActionName);
+	// waitForServer(headMovementActionName); // TODO: remove comment to test movement
 	as_->start();
 }
 
@@ -64,7 +65,7 @@ template <typename T>
 void SciRocDarknetBridge<T>::waitForServer(std::string server_name)
 {
 	int failedConnectionAttempt = 0;
-	while (!ac_->waitForServer(ros::Duration(1.0)) && failedConnectionAttempt)
+	while (!ac_->waitForServer(ros::Duration(1.0)) && failedConnectionAttempt < maxFailedConnectionAttempts)
 	{
 		ROS_WARN("Waiting for Action Server %s", server_name.c_str());
 		failedConnectionAttempt++;
@@ -84,8 +85,7 @@ void SciRocDarknetBridge<T>::cameraCallback(const sensor_msgs::ImageConstPtr &ms
 {
 	boost::unique_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
 
-	current_img_ = *msg;
-	//.get(); // update the last stored frame
+	current_img_ = *msg; // update the last stored frame
 }
 
 template <typename T>
@@ -93,7 +93,8 @@ geometry_msgs::Point SciRocDarknetBridge<T>::retrieveTablePos()
 {
 	/*	Temporary definition!	*/
 	// TODO: actually retrieve the info from the server
-	std::vector<float> table_point {1.0, 0.0, 0.8};
+	ROS_DEBUG("[%s]: retrieving table position.", as_name_.c_str());
+	std::vector<float> table_point{1.0, 0.0, 0.8};
 }
 
 template <typename T>
@@ -104,6 +105,7 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::ONGOING;
 	}
+	ROS_DEBUG("[%s]: Head started moving", as_name_.c_str());
 
 	geometry_msgs::Point look_up = table_pos;
 	look_up.z += 0.1;
@@ -114,8 +116,12 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 	control_msgs::PointHeadGoal head_goal = common_head_movement_traits_;
 	for (auto point : look_points)
 	{
+		// TODO: remove comments to test head movement
+		/*
 		head_goal.target.point = point;
 		head_movement_ac_->sendGoalAndWait(head_goal);
+		*/
+		std::this_thread::sleep_for(1s);
 	}
 	//
 	{
@@ -159,6 +165,7 @@ void SciRocDarknetBridge<T>::goalCB()
 	move_head_thread = std::thread(&SciRocDarknetBridge<T>::moveHead, this, retrieveTablePos());
 
 	as_clock.start();
+	ROS_DEBUG("[%s]: clock started.", as_name_.c_str());
 }
 template <typename T>
 void SciRocDarknetBridge<T>::preemptCB()
@@ -168,7 +175,7 @@ void SciRocDarknetBridge<T>::preemptCB()
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::NONE;
 	}
-	ROS_DEBUG("[%s] preemption request received.", as_name_.c_str());
+	ROS_INFO("[%s] preemption request received.", as_name_.c_str());
 
 	ac_->cancelAllGoals();
 	while (!(ac_->getState().isDone()))
@@ -273,6 +280,7 @@ void SciRocDarknetBridge<T>:: resultCB()
 {
 	// Stop the callback clock
 	as_clock.stop();
+	ROS_DEBUG("[%s]: image gathering completed.", as_name_.c_str());
 	// join the head moving thread
 	if(move_head_thread.joinable())
 		move_head_thread.join();
@@ -288,7 +296,6 @@ void SciRocDarknetBridge<T>:: resultCB()
 	*/
 	setResultImp(); // to be implemented in the children classes
 	as_->setSucceeded(action_.action_result.result);
-	//as_->setSucceeded(result_);
 	// TODO: how to correctly declare the result
 }
 

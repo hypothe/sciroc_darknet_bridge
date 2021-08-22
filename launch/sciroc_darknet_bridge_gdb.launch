@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+  <!-- Launch with gdb launch prefix -->
+  <include file="$(find sciroc_darknet_bridge)/launch/sciroc_darknet_bridge.launch">
+    <arg name="launch_prefix"   value="gdb -ex run --args"/>
+  </include>
+
+</launch>

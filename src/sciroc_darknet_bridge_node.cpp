@@ -30,9 +30,11 @@ class EnumBridge : public EnumAS
 					// if (box.probability >= detThreshold_)
 					++foundBoxes;
 				}
+				ROS_DEBUG("[enum]: %ld imageBoxesSize", imageBoxes.size());
 			}
 			foundBoxes /= detectedBoxes.size();
-			action_.action_result.result.n_found_tags = std::round(foundBoxes);
+			action_.action_result.result.n_found_tags = static_cast<int>(std::round(foundBoxes));
+			ROS_DEBUG("[enum]: %ld detectedBoxesSize\n%d boxes found", detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
 		}
 };
 
