@@ -15,6 +15,15 @@ objdet:
         s: 1
         ns: 0
       max_velocity: 2.0
+    
+    enumeration:
+      topic: /sciroc_objdet/bridge/enumeration_action
+
+    classification:
+      topic: /sciroc_objdet/bridge/classification_action
+      
+    comparison:
+      topic: /sciroc_objdet/bridge/comparison_action
   
   detection:
     threshold:
