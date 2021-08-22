@@ -60,10 +60,11 @@ class ClasBridge : public ClasAS
 			// NOTE: this returns all classess perceived at least once in one
 			// of the analyzed images
 			// TODO: should I return only the 3 most frequent classes?
+			ROS_DEBUG("[clas]: found classes");
 			for (auto const &cls : found_classes)
 			{
-				
 				action_.action_result.result.found_tags.push_back(cls.first);
+				ROS_DEBUG("[clas]:\t %s", cls.first.c_str());
 			}
 		}
 		std::map<std::string, size_t> found_classes;
@@ -80,6 +81,7 @@ class CompBridge : public CompAS
 	private:
 		void saveGoalDataImp()
 		{
+			exp_classes.clear();
 			for (auto expected_tag : action_.action_goal.goal.expected_tags)
 			{
 				exp_classes[expected_tag] = 0;
@@ -103,13 +105,16 @@ class CompBridge : public CompAS
 			// (remember to keep track of multiplicity in expected tags!!!)
 
 			bool found = true;
+			ROS_DEBUG("[comp]: found classes");
 			for (auto const& cls : exp_classes)
 			{
 				found = found && cls.second;
 				// if one of the expected classes has 0 elements set the flag to false
 				action_.action_result.result.found_tags.push_back(cls.first);
+				ROS_DEBUG("[comp]:\t %s", cls.first.c_str());
 			}
 			action_.action_result.result.match = found;
+			ROS_DEBUG("[comp]:\t found %d", found);
 		}
 		std::map<std::string, size_t> exp_classes;
 };
@@ -117,7 +122,9 @@ class CompBridge : public CompAS
 int main(int argc, char** argv) {
   ros::init(argc, argv, "sciroc_darknet_bridge_node");
   ros::NodeHandle nodeHandle;
-  EnumBridge enum_bridge(nodeHandle, "bridge_as");
+  EnumBridge enum_bridge(nodeHandle, "enum_bridge_as");
+  ClasBridge clas_bridge(nodeHandle, "clas_bridge_as");
+  CompBridge comp_bridge(nodeHandle, "comp_bridge_as");
 
   ros::spin();
   return 0;
