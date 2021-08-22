@@ -9,9 +9,9 @@ Interface between the ObjDet SciRoc ROS package and the darknet_ros ROS package.
 	- [x] Write the config file with values used by the class
 	- [x] Script a simple component to periodically publish an image as if it were a video stream
 	- [x] Write the remaining two children/implementation of the generic bridge Action Server
-- Aug, 21:
+- Aug, 22:
 	- [ ] Run tests on the whole infrastructure
 	- [ ] Fix emerged issues in the bridge
-- Aug, 22:
+- Aug, 23:
 	- [ ] Select images for the custom yolo database
 	- [ ] Start labeling those images
