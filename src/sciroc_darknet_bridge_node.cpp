@@ -30,11 +30,11 @@ class EnumBridge : public EnumAS
 					// if (box.probability >= detThreshold_)
 					++foundBoxes;
 				}
-				ROS_DEBUG("[enum]: %ld imageBoxesSize", imageBoxes.size());
+				ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
 			}
 			foundBoxes /= detectedBoxes.size();
 			action_.action_result.result.n_found_tags = static_cast<int>(std::round(foundBoxes));
-			ROS_DEBUG("[enum]: %ld detectedBoxesSize\n%d boxes found", detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
+			ROS_DEBUG_NAMED("result", "[enum]: %ld detectedBoxesSize\n%d boxes found", detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
 		}
 };
 
@@ -50,6 +50,9 @@ class ClasBridge : public ClasAS
 		void saveGoalDataImp(){}
 		void setResultImp()
 		{
+			std::map<std::string, size_t> found_classes;
+			action_.action_result.result.found_tags.clear();
+
 			for (auto imageBoxes : detectedBoxes)
 			{
 				for (auto box : imageBoxes)
@@ -60,14 +63,13 @@ class ClasBridge : public ClasAS
 			// NOTE: this returns all classess perceived at least once in one
 			// of the analyzed images
 			// TODO: should I return only the 3 most frequent classes?
-			ROS_DEBUG("[clas]: found classes");
+			ROS_DEBUG_NAMED("result", "[clas]: found classes");
 			for (auto const &cls : found_classes)
 			{
 				action_.action_result.result.found_tags.push_back(cls.first);
-				ROS_DEBUG("[clas]:\t %s", cls.first.c_str());
+				ROS_DEBUG_NAMED("result", "[clas]:\t %s", cls.first.c_str());
 			}
 		}
-		std::map<std::string, size_t> found_classes;
 };
 
 class CompBridge : public CompAS
@@ -89,11 +91,14 @@ class CompBridge : public CompAS
 		}
 		void setResultImp()
 		{
+			action_.action_result.result.found_tags.clear();
+			std::map<std::string, size_t> found_classes;
 			for (auto imageBoxes : detectedBoxes)
 			{
 				for (auto box : imageBoxes)
 				{
 					// Only count the number of instances for expected objects
+					++found_classes[box.Class];
 					if (exp_classes.count(box.Class))
 						++exp_classes[box.Class];
 				}
@@ -105,16 +110,19 @@ class CompBridge : public CompAS
 			// (remember to keep track of multiplicity in expected tags!!!)
 
 			bool found = true;
-			ROS_DEBUG("[comp]: found classes");
+			ROS_DEBUG_NAMED("result", "[comp]: found classes");
 			for (auto const& cls : exp_classes)
 			{
 				found = found && cls.second;
+			}
+			for (auto const& cls : found_classes)
+			{
 				// if one of the expected classes has 0 elements set the flag to false
 				action_.action_result.result.found_tags.push_back(cls.first);
-				ROS_DEBUG("[comp]:\t %s", cls.first.c_str());
+				ROS_DEBUG_NAMED("result", "[comp]:\t %s", cls.first.c_str());
 			}
 			action_.action_result.result.match = found;
-			ROS_DEBUG("[comp]:\t found %d", found);
+			ROS_DEBUG_NAMED("result", "[comp]:\t found %d", found);
 		}
 		std::map<std::string, size_t> exp_classes;
 };
@@ -122,6 +130,7 @@ class CompBridge : public CompAS
 int main(int argc, char** argv) {
   ros::init(argc, argv, "sciroc_darknet_bridge_node");
   ros::NodeHandle nodeHandle;
+	// TODO: get action names from rosparam
   EnumBridge enum_bridge(nodeHandle, "enum_bridge_as");
   ClasBridge clas_bridge(nodeHandle, "clas_bridge_as");
   CompBridge comp_bridge(nodeHandle, "comp_bridge_as");
