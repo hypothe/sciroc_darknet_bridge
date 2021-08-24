@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!--arg name="synthetic_camer_topic" value="/xtion/rgb/image_raw"-->
-<!--arg name="use_synthetic_camera" value="TRUE"-->
-
 <launch>
 	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find sciroc_darknet_bridge)/config/console.config"/>
 	<arg name="launch_prefix" default=""/>
+	<arg name="output" default="screen"/>
+	<arg name="required" default="true"/>
+	<arg name="respawn" default="false"/>
+	<arg name="node_args" default=""/>
+
 	<arg name="objdet_param_file"             default="$(find sciroc_darknet_bridge)/config/objdet.yaml"/>
 	<rosparam command="load" ns="sciroc_darknet_bridge" file="$(arg objdet_param_file)"/>
 
-	<node pkg="sciroc_darknet_bridge" ns="sciroc_darknet_bridge" type="sciroc_darknet_bridge_node" name="sciroc_darknet_bridge_node" output="screen" launch-prefix="$(arg launch_prefix)"/>
-		<!--param name="subscribers/camera_reading/topic" value="$(arg synthetic_camer_topic)" if="$(arg use_synthetic_camera)"-->
+	<node pkg="sciroc_darknet_bridge" ns="sciroc_darknet_bridge" type="sciroc_darknet_bridge_node"
+		name="sciroc_darknet_bridge_node" output="$(arg output)" launch-prefix="$(arg launch_prefix)"
+		required="$(arg required)" respawn="$(arg respawn)" args="$(arg node_args)"/>
 
 </launch>
