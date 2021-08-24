@@ -31,3 +31,10 @@ objdet:
       enumeration: 0.0
       classification: 0.0
       comparison: 0.0
+
+    selection_mode:
+      yolo: AVG
+      enumeration: MAX
+      classification: MAX
+      comparison: MAX
+

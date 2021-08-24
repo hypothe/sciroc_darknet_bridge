@@ -59,13 +59,29 @@ class SciRocDarknetBridge
 		
 		virtual void saveGoalDataImp() = 0;
 		virtual void setResultImp() = 0; // has to be implemented by the specific subclasses
-		
+		void setSelectionMode(int mode);
+		void setSelectionMode(std::string mode);
+
 		/* -- MEMBERS -- */
 		
 		ros::NodeHandle node_handle_;
 		T action_;
 		std::vector<std::vector<darknet_ros_msgs::BoundingBox> > detectedBoxes;
 		float det_threshold_;
+
+		/* Data aggregation policies
+			- AVG: take the average o among the detections for all frames received
+			- MODE: take the mode (most frequent) ""/ the most freq. n classes
+			- MAX: take the maximum number ""/ all the classes
+		*/
+		enum class SelectionMode
+		{
+			AVG,
+			MODE,
+			MAX
+		};
+
+		SelectionMode selection_mode_;
 
 	private:
 		/* -- METHODS -- */

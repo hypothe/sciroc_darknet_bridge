@@ -11,7 +11,14 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
 	image_sent_id_(0), image_detected_id_(0)
 {
+	// detection threshold (redundant, can be expressed directly in darknet_ros)
 	node_handle_.param("objdet/detection/threshold/yolo", det_threshold_, float(0));
+
+	// Selection Mode: how to aggregate the data received over multiple frames
+	std::string tmp_mode;
+	node_handle_.param("objdet/detection/selection_mode/yolo", tmp_mode, std::string("AVG"));
+	setSelectionMode(tmp_mode);
+
 	// Clock
 	as_clock = node_handle_.createTimer(ros::Duration(as_clock_period), &SciRocDarknetBridge<T>::clockCB, this, false, false);
 	// ActionClient
@@ -61,6 +68,27 @@ SciRocDarknetBridge<T>::~SciRocDarknetBridge()
 }
 
 /*	-- METHODS -- */
+
+template <typename T>
+void SciRocDarknetBridge<T>::setSelectionMode(int mode)
+{
+	selection_mode_ = (mode <= static_cast<int>(SelectionMode::MAX) && mode >= 0) ? static_cast<SelectionMode>(mode) : SelectionMode::AVG;
+}
+
+template <typename T>
+void SciRocDarknetBridge<T>::setSelectionMode(std::string mode)
+{
+	for (auto & c : mode)
+		c = (char)toupper(c);
+
+	if (mode == std::string("MODE"))
+		selection_mode_ = SelectionMode::MODE;
+	else if (mode == std::string("MAX"))
+		selection_mode_ = SelectionMode::MAX;
+	else
+		selection_mode_ = SelectionMode::AVG;
+}
+
 template <typename T>
 void SciRocDarknetBridge<T>::waitForServer(std::string server_name)
 {

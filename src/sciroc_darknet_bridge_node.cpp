@@ -17,25 +17,67 @@ class EnumBridge : public EnumAS
 		: EnumAS(nh_, action_server_name)
 		{
 			node_handle_.param("objdet/detection/threshold/enumeration", det_threshold_, det_threshold_);
+			std::string tmp_mode;
+			node_handle_.param("objdet/detection/selection_mode/enumeration", tmp_mode, std::string("MODE"));
+			setSelectionMode(tmp_mode);
 		}
 	private:
 		void saveGoalDataImp(){}
 		void setResultImp()
 		{
-			float foundBoxes = 0;
-			for (auto imageBoxes : detectedBoxes)
+			int foundBoxes = 0;
+			
+			switch (selection_mode_)
 			{
-				for (auto box : imageBoxes)
+			case SelectionMode::AVG:
+			{
+				float tmp_found_boxes = 0;
+				for (auto imageBoxes : detectedBoxes)
 				{
-					// if (box.probability >= detThreshold_)
-					++foundBoxes;
+					tmp_found_boxes += imageBoxes.size();
+					ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
 				}
-				ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
+				foundBoxes = static_cast<int>(tmp_found_boxes / detectedBoxes.size());
+				break;
 			}
-			foundBoxes /= detectedBoxes.size();
-			action_.action_result.result.n_found_tags = static_cast<int>(std::round(foundBoxes));
-			ROS_DEBUG_NAMED("result", "[enum]: %ld detectedBoxesSize\n%d boxes found", detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
+
+			case SelectionMode::MODE:
+			{
+				std::vector<int> freq_found(256, 0);
+				std::vector<int>::iterator res;
+				for (auto imageBoxes : detectedBoxes)
+				{
+					++freq_found[imageBoxes.size()];
+					ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
+				}
+
+				res = std::max_element(freq_found.begin(), freq_found.end(),
+															 [](const int a, const int b)
+															 { return (a <= b) ? b : a; }
+															);
+				foundBoxes = std::distance(freq_found.begin(), res);
+			}
+				break;
+			case SelectionMode::MAX:
+				int tmp_found_boxes;
+				for (auto imageBoxes : detectedBoxes)
+				{
+					tmp_found_boxes = imageBoxes.size();
+					
+					if (tmp_found_boxes > foundBoxes)
+						foundBoxes = tmp_found_boxes;
+					ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
+				}
+				break;
+
+			default:
+				ROS_WARN("[enum]: unexisting SelectionMode case");
+			}
+			
+			action_.action_result.result.n_found_tags = foundBoxes;
+			ROS_DEBUG_NAMED("result", "[enum:%d]: %ld detectedBoxesSize\n%d boxes found", static_cast<int>(selection_mode_), detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
 		}
+
 };
 
 class ClasBridge : public ClasAS
@@ -45,6 +87,9 @@ class ClasBridge : public ClasAS
 		: ClasAS(nh_, action_server_name)
 		{
 			node_handle_.param("objdet/detection/threshold/classification", det_threshold_, det_threshold_);
+			std::string tmp_mode;
+			node_handle_.param("objdet/detection/selection_mode/classification", tmp_mode, std::string("MAX"));
+			setSelectionMode(tmp_mode);
 		}
 	private:
 		void saveGoalDataImp(){}
@@ -79,6 +124,9 @@ class CompBridge : public CompAS
 		: CompAS(nh_, action_server_name)
 		{
 			node_handle_.param("objdet/detection/threshold/comparison", det_threshold_, det_threshold_);
+			std::string tmp_mode;
+			node_handle_.param("objdet/detection/selection_mode/comparison", tmp_mode, std::string("MAX"));
+			setSelectionMode(tmp_mode);
 		}
 	private:
 		void saveGoalDataImp()
