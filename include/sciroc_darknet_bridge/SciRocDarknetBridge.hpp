@@ -120,7 +120,7 @@ class SciRocDarknetBridge
 		ACTypePtr ac_; //-> darknet_ros ActionClient
 		const int maxFailedConnectionAttempts = 120;
 		ros::Timer as_clock;
-		const double as_clock_period = 0.2; // expect a reply 5 times per second, adjust if need be
+		double as_clock_period; // expect a reply 5 times per second, adjust if need be
 		int clock_lost_callbacks;
 		// Camera readings
 		std::shared_ptr<image_transport::ImageTransport> it;

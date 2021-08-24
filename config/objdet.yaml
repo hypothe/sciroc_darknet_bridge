@@ -26,6 +26,9 @@ objdet:
       topic: /sciroc_objdet/bridge/comparison_action
   
   detection:
+    period:
+      yolo: 0.1
+
     threshold:
       yolo: 0.0
       enumeration: 0.0
@@ -34,7 +37,7 @@ objdet:
 
     selection_mode:
       yolo: AVG
-      enumeration: MAX
+      enumeration: MODE
       classification: MAX
       comparison: MAX
 

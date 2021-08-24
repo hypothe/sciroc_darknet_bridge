@@ -7,10 +7,14 @@ namespace sciroc_darknet_bridge
 template <typename T>
 SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string action_server_name)
 : node_handle_(nh_),
+	as_clock_period(0.2),
 	as_name_(action_server_name),
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
 	image_sent_id_(0), image_detected_id_(0)
 {
+	// set frequency of clock (how frequently to sample & detect images)
+	node_handle_.param("objdet/detection/period/yolo", as_clock_period, double(0.2));
+
 	// detection threshold (redundant, can be expressed directly in darknet_ros)
 	node_handle_.param("objdet/detection/threshold/yolo", det_threshold_, float(0));
 
