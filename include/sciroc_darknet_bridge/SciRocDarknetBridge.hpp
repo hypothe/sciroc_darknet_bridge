@@ -144,6 +144,7 @@ class SciRocDarknetBridge
 		std::thread move_head_thread;
 		HeadACTypePtr head_movement_ac_;
 		control_msgs::PointHeadGoal common_head_movement_traits_;
+		bool enable_head_movement_;
 		// bool isHeadMoving;
 
 		enum class AcquisitionStatus

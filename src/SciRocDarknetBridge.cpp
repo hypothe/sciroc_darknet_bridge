@@ -8,21 +8,19 @@ template <typename T>
 SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string action_server_name)
 : node_handle_(nh_),
 	as_clock_period(0.2),
+	enable_head_movement_(false),
 	as_name_(action_server_name),
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
 	image_sent_id_(0), image_detected_id_(0)
 {
 	// set frequency of clock (how frequently to sample & detect images)
 	node_handle_.param("objdet/detection/period/yolo", as_clock_period, double(0.2));
-
 	// detection threshold (redundant, can be expressed directly in darknet_ros)
 	node_handle_.param("objdet/detection/threshold/yolo", det_threshold_, float(0));
-
 	// Selection Mode: how to aggregate the data received over multiple frames
 	std::string tmp_mode;
 	node_handle_.param("objdet/detection/selection_mode/yolo", tmp_mode, std::string("AVG"));
 	setSelectionMode(tmp_mode);
-
 	// Clock
 	as_clock = node_handle_.createTimer(ros::Duration(as_clock_period), &SciRocDarknetBridge<T>::clockCB, this, false, false);
 	// ActionClient
@@ -32,7 +30,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	// Head movement ActionClient
 	std::string headMovementActionName;
   node_handle_.param("objdet/actions/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
-	head_movement_ac_ = std::make_shared<HeadACType>(headMovementActionName, true);
+  node_handle_.param("objdet/actions/head_movement/enable", enable_head_movement_, false);
 	node_handle_.param("objdet/actions/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
 	node_handle_.param("objdet/actions/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
 	node_handle_.param("objdet/actions/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
@@ -51,7 +49,12 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	camera_sub_ = std::make_shared<image_transport::Subscriber>(it->subscribe(cameraTopicName, cameraQueueSize,
 																																						&SciRocDarknetBridge<T>::cameraCallback, this));
 	waitForServer(checkForObjectsActionName);
-	// waitForServer(headMovementActionName); // TODO: remove comment to test movement
+	
+	if (enable_head_movement_) // only create the AC if movement has been enabled
+	{
+		head_movement_ac_ = std::make_shared<HeadACType>(headMovementActionName, true);
+		waitForServer(headMovementActionName); 
+	}
 	as_->start();
 }
 
@@ -148,12 +151,13 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 	control_msgs::PointHeadGoal head_goal = common_head_movement_traits_;
 	for (auto point : look_points)
 	{
-		// TODO: remove comments to test head movement
-		/*
-		head_goal.target.point = point;
-		head_movement_ac_->sendGoalAndWait(head_goal);
-		*/
-		std::this_thread::sleep_for(1s);
+		if (enable_head_movement_)
+		{
+			head_goal.target.point = point;
+			head_movement_ac_->sendGoalAndWait(head_goal);
+		}
+		else
+			std::this_thread::sleep_for(std::chrono::duration<int>(head_goal.min_duration.sec));
 	}
 	//
 	{
