@@ -26,7 +26,7 @@ class EnumBridge : public EnumAS
 		void setResultImp()
 		{
 			int foundBoxes = 0;
-			
+
 			switch (selection_mode_)
 			{
 			case SelectionMode::AVG:
@@ -50,14 +50,18 @@ class EnumBridge : public EnumAS
 					++freq_found[imageBoxes.size()];
 					ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
 				}
-
+				for (int i = 0; i < 10; i++)
+				{
+					ROS_DEBUG_NAMED("result", "\t[enum]: freq_found[%d]: %d", i, freq_found[i]);
+				}
 				res = std::max_element(freq_found.begin(), freq_found.end(),
-															 [](const int a, const int b)
-															 { return (a <= b) ? b : a; }
+															 [](int a, int b)
+															 { return a <= b; }
 															);
+
 				foundBoxes = std::distance(freq_found.begin(), res);
-			}
 				break;
+			}
 			case SelectionMode::MAX:
 				int tmp_found_boxes;
 				for (auto imageBoxes : detectedBoxes)
@@ -75,7 +79,7 @@ class EnumBridge : public EnumAS
 			}
 			
 			action_.action_result.result.n_found_tags = foundBoxes;
-			ROS_DEBUG_NAMED("result", "[enum:%d]: %ld detectedBoxesSize\n%d boxes found", static_cast<int>(selection_mode_), detectedBoxes.size(), static_cast<int>(std::round(foundBoxes)));
+			ROS_DEBUG_NAMED("result", "[enum:%d]: %ld detectedBoxesSize\n%d boxes found", static_cast<int>(selection_mode_), detectedBoxes.size(), foundBoxes);
 		}
 
 };
