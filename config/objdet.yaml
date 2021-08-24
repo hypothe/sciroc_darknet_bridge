@@ -31,14 +31,14 @@ objdet:
       yolo: 0.1
 
     threshold:
-      yolo: 0.0
-      enumeration: 0.0
-      classification: 0.0
-      comparison: 0.0
+      yolo: 0.0           # generic
+      enumeration: 0.0    # enum mode specific
+      classification: 0.0 # clas mode specific
+      comparison: 0.0     # comp mode specific
 
     selection_mode:
-      yolo: AVG
-      enumeration: MODE
-      classification: MAX
-      comparison: MAX
+      yolo: AVG           # generic
+      enumeration: MODE   # enum mode specific
+      classification: MAX # clas mode specific
+      comparison: MAX     # comp mode specific
 

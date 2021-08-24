@@ -16,3 +16,5 @@ Interface between the ObjDet SciRoc ROS package and the darknet_ros ROS package.
 	- [x] Test detection on a pre-recorded video
 	- [ ] Select images for the custom yolo database
 	- [ ] Start labeling those images
+- Aug, 25:
+	- [ ] Add an **AVG** and **MODE** aggregation modes to both Classification and Comparison, keeping track of the objects cardinality in the scene (aka do not simply consider if an object was detected or not, but insert as many copies of its tag as the AVG/MODE of detected instances)
