@@ -36,9 +36,10 @@ objdet:
       classification: 0.0 # clas mode specific
       comparison: 0.0     # comp mode specific
 
-    selection_mode:
+    # choose among: AVG, MODE, MAX
+    selection_mode: 
       yolo: AVG           # generic
       enumeration: MODE   # enum mode specific
-      classification: MAX # clas mode specific
-      comparison: MAX     # comp mode specific
+      classification: MODE # clas mode specific
+      comparison: MODE     # comp mode specific
 
