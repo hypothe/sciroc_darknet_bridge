@@ -33,9 +33,15 @@ include_directories(
 add_library(${PROJECT_NAME}_lib
   src/SciRocDarknetBridge.cpp
 )
+file(GLOB BRIDGES_CPP
+  src/EnumBridge.cpp
+  src/ClasBridge.cpp
+  src/CompBridge.cpp
+)
+
 target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES})
 
-add_executable(${PROJECT_NAME}_node src/sciroc_darknet_bridge_node.cpp)
+add_executable(${PROJECT_NAME}_node src/sciroc_darknet_bridge_node.cpp ${BRIDGES_CPP})
 
  
 target_link_libraries(${PROJECT_NAME}_node
