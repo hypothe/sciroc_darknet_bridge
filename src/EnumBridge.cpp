@@ -6,7 +6,10 @@
 
 // SciRoc_ObjDet_msgs
 #include "sciroc_objdet/ObjectEnumerationAction.h"
+#include "sciroc_darknet_bridge/bridge_utils.hpp"
 
+namespace sciroc_darknet_bridge
+{
 using EnumAS = sciroc_darknet_bridge::SciRocDarknetBridge<sciroc_objdet::ObjectEnumerationAction>;
 
 class EnumBridge : public EnumAS
@@ -29,13 +32,13 @@ class EnumBridge : public EnumAS
 			switch (selection_mode_)
 			{
 				case SelectionMode::AVG:
-					setResAvg(foundBoxes);
+					foundBoxes = sciroc_darknet_bridge_utils::setResAvg(detectedBoxes);
 					break;
 				case SelectionMode::MODE:
-					setResMode(foundBoxes);
+					foundBoxes = sciroc_darknet_bridge_utils::setResMode(detectedBoxes);
 					break;
 				case SelectionMode::MAX:
-					setResMax(foundBoxes);
+					foundBoxes = sciroc_darknet_bridge_utils::setResMax(detectedBoxes);
 					break;
 				default:
 					ROS_WARN("[enum]: unexisting SelectionMode case");
@@ -44,51 +47,8 @@ class EnumBridge : public EnumAS
 			action_.action_result.result.n_found_tags = foundBoxes;
 			ROS_DEBUG_NAMED("result", "[enum:%d]: %ld detectedBoxesSize\n%d boxes found", static_cast<int>(selection_mode_), detectedBoxes.size(), foundBoxes);
 		}
-
-	void setResAvg(int& foundBoxes)
-	{
-		float tmp_found_boxes = 0;
-		for (auto imageBoxes : detectedBoxes)
-		{
-			tmp_found_boxes += imageBoxes.size();
-			ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
-		}
-		foundBoxes = static_cast<int>(tmp_found_boxes / detectedBoxes.size());
-	}
-
-	void setResMode(int& foundBoxes)
-	{
-		std::vector<int> freq_found(256, 0);
-		std::vector<int>::iterator res;
-		for (auto imageBoxes : detectedBoxes)
-		{
-			++freq_found[imageBoxes.size()];
-			ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
-		}
-		for (int i = 0; i < 10; i++)
-		{
-			ROS_DEBUG_NAMED("result", "\t[enum]: freq_found[%d]: %d", i, freq_found[i]);
-		}
-		res = std::max_element(freq_found.begin(), freq_found.end(),
-														[](int a, int b)
-														{ return a <= b; }
-													);
-
-		foundBoxes = std::distance(freq_found.begin(), res);
-	}
-
-	void setResMax(int& foundBoxes)
-	{
-		int tmp_found_boxes;
-		for (auto imageBoxes : detectedBoxes)
-		{
-			tmp_found_boxes = imageBoxes.size();
-			
-			if (tmp_found_boxes > foundBoxes)
-				foundBoxes = tmp_found_boxes;
-			ROS_DEBUG_NAMED("result", "[enum]: %ld imageBoxesSize", imageBoxes.size());
-		}
-	}
 };
+
+}
 
 #endif // ENUM_BRIDGE_CPP

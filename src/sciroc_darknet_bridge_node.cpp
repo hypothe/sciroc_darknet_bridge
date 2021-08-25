@@ -5,6 +5,7 @@
 #include "ClasBridge.cpp"
 #include "CompBridge.cpp"
 
+using namespace sciroc_darknet_bridge;
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "sciroc_darknet_bridge_node");

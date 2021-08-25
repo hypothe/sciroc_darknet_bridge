@@ -23,6 +23,7 @@
 
 // Darknet_ROS
 #include <darknet_ros_msgs/CheckForObjectsAction.h>
+#include <darknet_ros_msgs/BoundingBox.h>
 
 // SciRoc_ObjDet_msgs
 #include "sciroc_objdet/ObjectEnumerationAction.h"

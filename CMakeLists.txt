@@ -32,6 +32,7 @@ include_directories(
 ## Declare a C++ library
 add_library(${PROJECT_NAME}_lib
   src/SciRocDarknetBridge.cpp
+  src/bridge_utils.cpp
 )
 file(GLOB BRIDGES_CPP
   src/EnumBridge.cpp
