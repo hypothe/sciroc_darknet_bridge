@@ -53,6 +53,7 @@ class ClasBridge : public ClasAS
 				ROS_DEBUG_NAMED("result", "[clas]:\t %s", tag.c_str());
 			}
 			action_.action_result.result.found_tags = tags;
+			
 		}
 };
 

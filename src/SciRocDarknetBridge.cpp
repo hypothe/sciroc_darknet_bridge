@@ -129,7 +129,17 @@ geometry_msgs::Point SciRocDarknetBridge<T>::retrieveTablePos()
 	/*	Temporary definition!	*/
 	// TODO: actually retrieve the info from the server
 	ROS_DEBUG("[%s]: retrieving table position.", as_name_.c_str());
-	std::vector<float> table_point{1.0, 0.0, 0.8};
+	geometry_msgs::Point table_pos;
+
+	table_pos.x = action_.action_goal.goal.table_pos.x;
+	table_pos.y = action_.action_goal.goal.table_pos.y;
+
+	if (!node_handle_.getParam(std::string("/objdet/actions/head_moving/pointing_axis/z"), table_pos.z))
+  {
+    ROS_ERROR("[%s]: no table height detected", as_name_.c_str());
+  }
+
+	return table_pos;
 }
 
 template <typename T>

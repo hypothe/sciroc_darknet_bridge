@@ -54,6 +54,7 @@
   <build_depend>darknet_ros</build_depend>
   <build_depend>darknet_ros_msgs</build_depend>
   <build_depend>roscpp</build_depend>
+  <depend>geometry_msgs</depend>
   <build_depend>sciroc_objdet</build_depend>
   <build_export_depend>actionlib</build_export_depend>
   <build_export_depend>actionlib_msgs</build_export_depend>

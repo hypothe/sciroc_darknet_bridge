@@ -11,6 +11,8 @@ objdet:
     head_movement:
       enable: false
       topic: /head_controller/point_head_action
+      pointing_axis:
+        z: 0.80
       pointing_frame: /xtion_rgb_optical_frame
       min_duration:
         s: 1

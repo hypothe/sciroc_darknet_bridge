@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   darknet_ros_msgs
   roscpp
   sciroc_objdet
+  geometry_msgs
 )
 
 find_package(Boost REQUIRED COMPONENTS system)
@@ -19,7 +20,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}_lib
-  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros darknet_ros_msgs roscpp sciroc_objdet
+  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros darknet_ros_msgs roscpp sciroc_objdet geometry_msgs
   DEPENDS system_lib
 )
 
