@@ -31,7 +31,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	std::string headMovementActionName;
   node_handle_.param("objdet/actions/head_movement/topic", headMovementActionName, std::string("/head_controller/point_head_action"));
   node_handle_.param("objdet/actions/head_movement/enable", enable_head_movement_, false);
-	node_handle_.param("objdet/actions/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/base_link"));
+	node_handle_.param("objdet/actions/head_movement/frame_id", common_head_movement_traits_.target.header.frame_id, std::string("/map"));
 	node_handle_.param("objdet/actions/head_movement/pointing_frame", common_head_movement_traits_.pointing_frame, std::string("/xtion_rgb_optical_frame"));
 	node_handle_.param("objdet/actions/head_movement/min_duration/s", common_head_movement_traits_.min_duration.sec, 1);
 	node_handle_.param("objdet/actions/head_movement/max_velocity", common_head_movement_traits_.max_velocity, double(2.0));
@@ -150,7 +150,8 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::ONGOING;
 	}
-	ROS_DEBUG("[%s]: Head started moving", as_name_.c_str());
+	ROS_DEBUG("[%s]: Head started moving\n looking at [%f, %f, %f]", 	as_name_.c_str(),
+																																		table_pos.x, table_pos.y, table_pos.z);
 
 	geometry_msgs::Point look_up = table_pos;
 	look_up.z += 0.1;
