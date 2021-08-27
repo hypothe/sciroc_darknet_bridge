@@ -48,12 +48,12 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	// Start the components
 	camera_sub_ = std::make_shared<image_transport::Subscriber>(it->subscribe(cameraTopicName, cameraQueueSize,
 																																						&SciRocDarknetBridge<T>::cameraCallback, this));
-	waitForServer(checkForObjectsActionName);
+	waitForServer(checkForObjectsActionName, ac_);
 	
 	if (enable_head_movement_) // only create the AC if movement has been enabled
 	{
 		head_movement_ac_ = std::make_shared<HeadACType>(headMovementActionName, true);
-		waitForServer(headMovementActionName); 
+		waitForServer(headMovementActionName, head_movement_ac_); 
 	}
 	as_->start();
 }
@@ -97,10 +97,11 @@ void SciRocDarknetBridge<T>::setSelectionMode(std::string mode)
 }
 
 template <typename T>
-void SciRocDarknetBridge<T>::waitForServer(std::string server_name)
+template <typename ClientTypePtr>
+void SciRocDarknetBridge<T>::waitForServer(std::string server_name, ClientTypePtr action_client)
 {
 	int failedConnectionAttempt = 0;
-	while (!ac_->waitForServer(ros::Duration(1.0)) && failedConnectionAttempt < maxFailedConnectionAttempts)
+	while (!action_client->waitForServer(ros::Duration(1.0)) && failedConnectionAttempt < maxFailedConnectionAttempts)
 	{
 		ROS_WARN("Waiting for Action Server %s", server_name.c_str());
 		failedConnectionAttempt++;
@@ -134,7 +135,7 @@ geometry_msgs::Point SciRocDarknetBridge<T>::retrieveTablePos()
 	table_pos.x = action_.action_goal.goal.table_pos.x;
 	table_pos.y = action_.action_goal.goal.table_pos.y;
 
-	if (!node_handle_.getParam(std::string("/objdet/actions/head_moving/pointing_axis/z"), table_pos.z))
+	if (!node_handle_.getParam("objdet/actions/head_movement/pointing_axis/z", table_pos.z))
   {
     ROS_ERROR("[%s]: no table height detected", as_name_.c_str());
   }
@@ -150,22 +151,34 @@ void SciRocDarknetBridge<T>::moveHead(geometry_msgs::Point table_pos) // in thre
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
     acquisition_status_ = AcquisitionStatus::ONGOING;
 	}
-	ROS_DEBUG("[%s]: Head started moving\n looking at [%f, %f, %f]", 	as_name_.c_str(),
+	ROS_DEBUG_NAMED("head", "[%s]: Head started moving\n looking at [%f, %f, %f]", 	as_name_.c_str(),
 																																		table_pos.x, table_pos.y, table_pos.z);
 
 	geometry_msgs::Point look_up = table_pos;
-	look_up.z += 0.1;
+	look_up.z += 0.2; //0.1;
 	geometry_msgs::Point look_down = table_pos;
-	look_down.z -= 0.1;
+	look_down.z -= 0.2; // 0.1;
 	// Sequence of points for a "down - up - back to start" movement
 	std::vector<geometry_msgs::Point> look_points {look_down, table_pos, look_up, table_pos};
 	control_msgs::PointHeadGoal head_goal = common_head_movement_traits_;
+	std::chrono::duration<double> head_move_duration(static_cast<int>(head_goal.min_duration.sec));
+
 	for (auto point : look_points)
 	{
 		if (enable_head_movement_)
 		{
+			auto rqst_start = std::chrono::steady_clock::now();
 			head_goal.target.point = point;
-			head_movement_ac_->sendGoalAndWait(head_goal);
+			head_movement_ac_->sendGoal(head_goal);
+			ROS_DEBUG_NAMED("head", "[%s]: Head movement action request", as_name_.c_str());
+
+			head_movement_ac_->waitForResult(ros::Duration(2*head_goal.min_duration.sec));
+			actionlib::SimpleClientGoalState state = head_movement_ac_->getState();
+
+			ROS_DEBUG_NAMED("head", "[%s]: Head movement action terminated with %s", as_name_.c_str(), state.toString().c_str());
+			// this is here (hopefully temporarily, delaing with the head action server returning at seemingly
+			// random delays)
+			std::this_thread::sleep_until(rqst_start + head_move_duration);
 		}
 		else
 			std::this_thread::sleep_for(std::chrono::duration<int>(head_goal.min_duration.sec));
@@ -347,8 +360,17 @@ void SciRocDarknetBridge<T>:: resultCB()
 }
 
 // Reference to correctly link the cpp
+
 template class SciRocDarknetBridge<sciroc_objdet::ObjectEnumerationAction>;
+template void SciRocDarknetBridge<sciroc_objdet::ObjectEnumerationAction>::waitForServer(std::string server_name, ACTypePtr action_client);
+template void SciRocDarknetBridge<sciroc_objdet::ObjectEnumerationAction>::waitForServer(std::string server_name, HeadACTypePtr action_client);
+
 template class SciRocDarknetBridge<sciroc_objdet::ObjectClassificationAction>;
+template void SciRocDarknetBridge<sciroc_objdet::ObjectClassificationAction>::waitForServer(std::string server_name, ACTypePtr action_client);
+template void SciRocDarknetBridge<sciroc_objdet::ObjectClassificationAction>::waitForServer(std::string server_name, HeadACTypePtr action_client);
+
 template class SciRocDarknetBridge<sciroc_objdet::ObjectComparisonAction>;
+template void SciRocDarknetBridge<sciroc_objdet::ObjectComparisonAction>::waitForServer(std::string server_name, ACTypePtr action_client);
+template void SciRocDarknetBridge<sciroc_objdet::ObjectComparisonAction>::waitForServer(std::string server_name, HeadACTypePtr action_client);
 
 } // namespace

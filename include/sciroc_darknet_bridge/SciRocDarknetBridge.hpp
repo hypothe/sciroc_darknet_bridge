@@ -86,8 +86,8 @@ class SciRocDarknetBridge
 
 	private:
 		/* -- METHODS -- */
-		
-		void waitForServer(std::string server_name);
+		template <typename ClientTypePtr>
+		void waitForServer(std::string server_name, ClientTypePtr action_client);
 		/*
 			Subscribe to the camera topic and keep track of the latest
 			image received (which will be sent to the darknet_ros_as)
