@@ -12,15 +12,18 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sciroc_objdet
   geometry_msgs
+  cv_bridge
 )
 
 find_package(Boost REQUIRED COMPONENTS system)
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}_lib
-  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros darknet_ros_msgs roscpp sciroc_objdet geometry_msgs
+  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros darknet_ros_msgs roscpp sciroc_objdet geometry_msgs cv_bridge
   DEPENDS system_lib
 )
 
@@ -41,7 +44,11 @@ file(GLOB BRIDGES_CPP
   src/CompBridge.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_lib 
+  ${OpenCV_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${catkin_LIBRARIES}
+)
 
 add_executable(${PROJECT_NAME}_node src/sciroc_darknet_bridge_node.cpp ${BRIDGES_CPP})
 
@@ -69,3 +76,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
+
+## define flag that sets whether images have to be displayed
+## (and open_cv libs included)
+# add_definitions(-DDISPLAY_IMAGE)

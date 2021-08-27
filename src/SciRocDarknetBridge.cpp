@@ -1,4 +1,5 @@
 #include "sciroc_darknet_bridge/SciRocDarknetBridge.hpp"
+#include <random>
 
 using namespace std::literals::chrono_literals;
 
@@ -13,6 +14,8 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
 	image_sent_id_(0), image_detected_id_(0)
 {
+	ROS_INFO("[%s]: Booting.", as_name_.c_str());
+	node_handle_.param("objdet/detection/display_image", display_image_, false);
 	// set frequency of clock (how frequently to sample & detect images)
 	node_handle_.param("objdet/detection/period/yolo", as_clock_period, double(0.2));
 	// detection threshold (redundant, can be expressed directly in darknet_ros)
@@ -56,6 +59,26 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 		waitForServer(headMovementActionName, head_movement_ac_); 
 	}
 	as_->start();
+
+	// color vector
+	if (display_image_)
+	{
+		for (uint16_t i = 0; i < 256; i += 64)
+		{
+			for (uint16_t j = 0; j < 256; j += 64)
+			{
+				for (uint16_t k = 0; k < 256; k += 64)
+				{
+					if (i == j && i == k )
+						continue;
+					colors_.push_back(cv::Scalar(i, j, k));
+				}
+			}
+		}
+		std::shuffle(colors_.begin(), colors_.end(), std::default_random_engine());
+		ROS_DEBUG_NAMED("display", "[%s] colors vector filled with %d elements", as_name_.c_str(), colors_.size());
+	}
+	ROS_INFO("[%s]: Up and running.", as_name_.c_str());
 }
 
 template <typename T>
@@ -217,6 +240,9 @@ void SciRocDarknetBridge<T>::goalCB()
 
 	if (move_head_thread.joinable())
 		move_head_thread.join();
+
+	if(display_thread.joinable())
+		display_thread.join();
 	// TODO: make head reset to standard position
 	{
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
@@ -255,6 +281,7 @@ void SciRocDarknetBridge<T>::sendGoal()
 	{
 		boost::shared_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
 		goal.image = current_img_; // retrieve last image perceived
+		last_img_ = current_img_;
 	}
 	goal.id = image_sent_id_;
 
@@ -336,12 +363,15 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 }
 
 template <typename T>
-void SciRocDarknetBridge<T>:: resultCB()
+void SciRocDarknetBridge<T>::resultCB()
 {
 	// Stop the callback clock
 	as_clock.stop();
 	ROS_DEBUG("[%s]: image gathering completed.", as_name_.c_str());
 	// join the head moving thread
+	if(display_thread.joinable())
+		display_thread.join();
+
 	if(move_head_thread.joinable())
 		move_head_thread.join();
 	else
@@ -352,11 +382,61 @@ void SciRocDarknetBridge<T>:: resultCB()
 	}
 	/* 	in this function, to be implemented in the children,
 			fill a result var appropriately and publish it.
-		
 	*/
 	setResultImp(); // to be implemented in the children classes
 	as_->setSucceeded(action_.action_result.result);
-	// TODO: how to correctly declare the result
+
+	if (!display_image_)
+		return;
+
+	display_thread = std::thread(&SciRocDarknetBridge<T>::displayLastDetection, this);
+	
+	
+
+}
+
+template <typename T>
+void SciRocDarknetBridge<T>::displayLastDetection()
+{
+	cv_bridge::CvImagePtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvCopy(last_img_, sensor_msgs::image_encodings::BGR8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
+	// take the boxes detected in the last frame
+	// TODO: move this definition in an init, not calling it each time!
+	/*
+	std::vector<cv::Scalar> colors;
+	for (uint8_t i = 0; i < 256; i += 64)
+	{
+		for (uint8_t j = 0; j < 256; j += 64)
+		{
+			for (uint8_t k = 0; k < 256; k += 64)
+			{
+				if (i == j || i == k || j == k)
+					continue;
+				colors.push_back(cv::Scalar(i, j, k))
+			}
+		}
+	}
+	std::shuffle(colors.begin(), colors.end(), std::default_random_engine());
+	*/
+	int i = 0;
+	for (auto box : detectedBoxes.back())
+	{
+		cv::rectangle(cv_ptr->image,
+									cv::Point(box.xmin, box.ymin), cv::Point(box.xmax, box.ymax),
+									colors_[++i % colors_.size()],
+									2, cv::LINE_8);
+	}
+
+	cv::imshow("YOLOv3", cv_ptr->image);
+	cv::waitKey(3000);
 }
 
 // Reference to correctly link the cpp

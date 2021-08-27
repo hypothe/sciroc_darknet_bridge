@@ -44,6 +44,13 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
+// #ifdef DISPLAY_IMAGES
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+// #endif
+
 namespace sciroc_darknet_bridge
 {
 
@@ -107,6 +114,8 @@ class SciRocDarknetBridge
 		void yoloDoneCB(const actionlib::SimpleClientGoalState &state, const darknet_ros_msgs::CheckForObjectsResultConstPtr &result);
 		void clockCB(const ros::TimerEvent &);
 
+		void displayLastDetection();
+
 		/* -- MEMBERS -- */
 
 		typedef actionlib::SimpleActionServer<T> ASType;
@@ -136,6 +145,10 @@ class SciRocDarknetBridge
 		int image_sent_id_;
 		int image_detected_id_;
 		boost::shared_mutex mutexImageDetectedId_;
+		bool display_image_;
+		sensor_msgs::Image last_img_;
+		std::thread display_thread;
+		std::vector<cv::Scalar> colors_;
 		/*
 			Base template class, needs to be implemented by the three different ActionServers
 			The client part will be the same, but the resultCB will be pure virtual
