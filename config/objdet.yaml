@@ -30,7 +30,7 @@ objdet:
       topic: /sciroc_objdet/bridge/comparison_action
   
   detection:
-    display_image: false
+    display_image: true
 
     period:
       yolo: 0.1

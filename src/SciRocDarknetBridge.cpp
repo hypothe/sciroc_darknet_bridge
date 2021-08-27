@@ -76,7 +76,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 			}
 		}
 		std::shuffle(colors_.begin(), colors_.end(), std::default_random_engine());
-		ROS_DEBUG_NAMED("display", "[%s] colors vector filled with %d elements", as_name_.c_str(), colors_.size());
+		ROS_DEBUG_NAMED("display", "[%s] colors vector filled with %ld elements", as_name_.c_str(), colors_.size());
 	}
 	ROS_INFO("[%s]: Up and running.", as_name_.c_str());
 }
@@ -408,31 +408,16 @@ void SciRocDarknetBridge<T>::displayLastDetection()
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	// take the boxes detected in the last frame
-	// TODO: move this definition in an init, not calling it each time!
-	/*
-	std::vector<cv::Scalar> colors;
-	for (uint8_t i = 0; i < 256; i += 64)
-	{
-		for (uint8_t j = 0; j < 256; j += 64)
-		{
-			for (uint8_t k = 0; k < 256; k += 64)
-			{
-				if (i == j || i == k || j == k)
-					continue;
-				colors.push_back(cv::Scalar(i, j, k))
-			}
-		}
-	}
-	std::shuffle(colors.begin(), colors.end(), std::default_random_engine());
-	*/
+	
 	int i = 0;
 	for (auto box : detectedBoxes.back())
 	{
+		auto color = colors_[++i % colors_.size()];
 		cv::rectangle(cv_ptr->image,
 									cv::Point(box.xmin, box.ymin), cv::Point(box.xmax, box.ymax),
-									colors_[++i % colors_.size()],
+									color,
 									2, cv::LINE_8);
+		cv::putText(cv_ptr->image, box.Class, cv::Point(box.xmin, box.ymin), 3, 1, color, 2);
 	}
 
 	cv::imshow("YOLOv3", cv_ptr->image);
