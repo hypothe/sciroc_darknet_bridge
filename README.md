@@ -23,7 +23,7 @@ Interface between the ObjDet SciRoc ROS package and the darknet_ros ROS package.
 	- [x] Start labeling images
 	- [x] Update original YOLOR COLAB to deal with YOLOv3 (darknet compatibl version)
 - Aug, 29:
-	- [ ] Take images with morning line conditions
+	- [x] Take images with morning line conditions
 	- [ ] Do a preliminary training on the classes for which there are enough pics
 	- [ ] Keep labeling images
 - Aug, 30:
