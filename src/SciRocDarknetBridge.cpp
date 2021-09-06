@@ -28,7 +28,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	as_clock = node_handle_.createTimer(ros::Duration(as_clock_period), &SciRocDarknetBridge<T>::clockCB, this, false, false);
 	// ActionClient
 	std::string checkForObjectsActionName;
-  node_handle_.param("actions/detection/topic", checkForObjectsActionName, std::string("/darknet_ros_as/check_for_objects"));
+  node_handle_.param("objdet/actions/detection/topic", checkForObjectsActionName, std::string("/yolov5_as/check_for_objects"));
 	ac_ = std::make_shared<ACType>(checkForObjectsActionName, true);
 	// Head movement ActionClient
 	std::string headMovementActionName;
