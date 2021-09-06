@@ -7,6 +7,10 @@ objdet:
       queue_size: 1
 
   actions:
+
+    detection:
+      topic: /yolov5_as/check_for_objects
+      #topic: /darknet_ros_as/check_for_objects
   
     head_movement:
       enable: false
