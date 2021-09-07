@@ -14,23 +14,21 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>boost</depend>
   <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
 
   <build_depend>actionlib</build_depend>
   <build_depend>actionlib_msgs</build_depend>
-  <build_depend>darknet_ros</build_depend>
   <build_depend>darknet_ros_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <depend>geometry_msgs</depend>
   <build_depend>sciroc_objdet</build_depend>
   <build_export_depend>actionlib</build_export_depend>
   <build_export_depend>actionlib_msgs</build_export_depend>
-  <build_export_depend>darknet_ros</build_export_depend>
   <build_export_depend>darknet_ros_msgs</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>sciroc_objdet</build_export_depend>
   <exec_depend>actionlib</exec_depend>
   <exec_depend>actionlib_msgs</exec_depend>
-  <exec_depend>darknet_ros</exec_depend>
   <exec_depend>darknet_ros_msgs</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sciroc_objdet</exec_depend>

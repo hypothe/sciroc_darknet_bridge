@@ -7,12 +7,12 @@ add_compile_options(-std=c++14)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
-  darknet_ros
   darknet_ros_msgs
   roscpp
   sciroc_objdet
   geometry_msgs
   cv_bridge
+  image_transport
 )
 
 find_package(Boost REQUIRED COMPONENTS system)
@@ -23,7 +23,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}_lib
-  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros darknet_ros_msgs roscpp sciroc_objdet geometry_msgs cv_bridge
+  CATKIN_DEPENDS actionlib actionlib_msgs darknet_ros_msgs roscpp sciroc_objdet geometry_msgs cv_bridge
   DEPENDS system_lib
 )
 
