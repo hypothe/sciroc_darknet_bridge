@@ -2,14 +2,15 @@ objdet:
   subscribers:
 
     camera_reading:
-      topic: /synth_camera/image_raw
+      topic: /xtion/rgb/image_raw
+      #/synth_camera/image_raw
       # topic: /usb_cam/image_raw
       queue_size: 1
 
   actions:
   
     head_movement:
-      enable: false
+      enable: true
       topic: /head_controller/point_head_action
       pointing_axis:
         z: 0.80
