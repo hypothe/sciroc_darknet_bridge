@@ -317,7 +317,7 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 	AcquisitionStatus tempAS;
 	{
 		boost::shared_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
-    tempAS = acquisition_status_;
+    	tempAS = acquisition_status_;
 	}
 	switch (tempAS)
 	{
@@ -344,9 +344,17 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 			return;
 		}
 
+		/*	Display the last received image skipping the case where no image has been received yet*/
+		if (display_image_ && tmp_last_detected_image_id > 0)
+		{
+			if(display_thread.joinable())
+				display_thread.join();
+			display_thread = std::thread(&SciRocDarknetBridge<T>::displayLastDetection, this);
+		}
 		image_sent_id_++;
 		sendGoal();
 
+		
 		// YES -> get new image and send it
 		// NO -> skip this image (keep a counter on the number of failed calls for debugging)
 		break;
@@ -378,7 +386,7 @@ void SciRocDarknetBridge<T>::resultCB()
 		ROS_WARN("[%s]: move_head_thread not joinable when it should.", as_name_.c_str());
 	{
 		boost::unique_lock<boost::shared_mutex> lockAcquisitionStatus(mutexAcquisitionStatus_);
-    acquisition_status_ = AcquisitionStatus::NONE;
+    	acquisition_status_ = AcquisitionStatus::NONE;
 	}
 	/* 	in this function, to be implemented in the children,
 			fill a result var appropriately and publish it.
@@ -399,9 +407,16 @@ template <typename T>
 void SciRocDarknetBridge<T>::displayLastDetection()
 {
 	cv_bridge::CvImagePtr cv_ptr;
+	sensor_msgs::Image display_img;
+	std::vector<darknet_ros_msgs::BoundingBox> display_boxes;
+	{
+		boost::shared_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
+		display_img = last_img_; // retrieve last image perceived
+		display_boxes = detectedBoxes.back();
+	}
 	try
 	{
-		cv_ptr = cv_bridge::toCvCopy(last_img_, sensor_msgs::image_encodings::BGR8);
+		cv_ptr = cv_bridge::toCvCopy(display_img, sensor_msgs::image_encodings::BGR8);
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -410,7 +425,7 @@ void SciRocDarknetBridge<T>::displayLastDetection()
 	}
 	
 	int i = 0;
-	for (auto box : detectedBoxes.back())
+	for (auto box : display_boxes)
 	{
 		auto color = colors_[++i % colors_.size()];
 		cv::rectangle(cv_ptr->image,
@@ -420,7 +435,7 @@ void SciRocDarknetBridge<T>::displayLastDetection()
 		cv::putText(cv_ptr->image, box.Class, cv::Point(box.xmin, box.ymin), 3, 1, color, 2);
 	}
 
-	cv::imshow("YOLOv3", cv_ptr->image);
+	cv::imshow("YOLOv5", cv_ptr->image);
 	cv::waitKey(3000);
 }
 
