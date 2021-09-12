@@ -147,6 +147,7 @@ class SciRocDarknetBridge
 		boost::shared_mutex mutexImageDetectedId_;
 		bool display_image_;
 		sensor_msgs::Image last_img_;
+		bool run_display;
 		std::thread display_thread;
 		std::vector<cv::Scalar> colors_;
 		/*

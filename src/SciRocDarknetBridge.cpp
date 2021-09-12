@@ -12,7 +12,7 @@ SciRocDarknetBridge<T>::SciRocDarknetBridge(ros::NodeHandle nh_, std::string act
 	enable_head_movement_(false),
 	as_name_(action_server_name),
 	as_(std::make_shared<ASType>(nh_, action_server_name, false)),
-	image_sent_id_(0), image_detected_id_(0)
+	image_sent_id_(0), image_detected_id_(0), run_display(false)
 {
 	ROS_INFO("[%s]: Booting.", as_name_.c_str());
 	node_handle_.param("objdet/detection/display_image", display_image_, false);
@@ -345,10 +345,11 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 		}
 
 		/*	Display the last received image skipping the case where no image has been received yet*/
-		if (display_image_ && tmp_last_detected_image_id > 0)
+		if (!run_display && display_image_ && tmp_last_detected_image_id > 0)
 		{
-			if(display_thread.joinable())
-				display_thread.join();
+			// It's not ideal, but the fact we set run_display to true here prevents multiple calls
+			// making this a one-shot call
+			run_display = true;
 			display_thread = std::thread(&SciRocDarknetBridge<T>::displayLastDetection, this);
 		}
 		image_sent_id_++;
@@ -361,6 +362,7 @@ void SciRocDarknetBridge<T>::clockCB(const ros::TimerEvent&)
 	case AcquisitionStatus::END:
 		/*	call the response CB	*/
 		ROS_DEBUG("[%s]: head movement ended, calling the resultCB", as_name_.c_str());
+		run_display = false;
 		resultCB();
 		break;
 	default:
@@ -409,34 +411,36 @@ void SciRocDarknetBridge<T>::displayLastDetection()
 	cv_bridge::CvImagePtr cv_ptr;
 	sensor_msgs::Image display_img;
 	std::vector<darknet_ros_msgs::BoundingBox> display_boxes;
+	while (run_display)
 	{
-		boost::shared_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
-		display_img = last_img_; // retrieve last image perceived
-		display_boxes = detectedBoxes.back();
-	}
-	try
-	{
-		cv_ptr = cv_bridge::toCvCopy(display_img, sensor_msgs::image_encodings::BGR8);
-	}
-	catch (cv_bridge::Exception& e)
-	{
-		ROS_ERROR("cv_bridge exception: %s", e.what());
-		return;
-	}
-	
-	int i = 0;
-	for (auto box : display_boxes)
-	{
-		auto color = colors_[++i % colors_.size()];
-		cv::rectangle(cv_ptr->image,
-									cv::Point(box.xmin, box.ymin), cv::Point(box.xmax, box.ymax),
-									color,
-									2, cv::LINE_8);
-		cv::putText(cv_ptr->image, box.Class, cv::Point(box.xmin, box.ymin), 3, 1, color, 2);
-	}
+		{
+			boost::shared_lock<boost::shared_mutex> lockCurrentImage(mutexCurrentImage_);
+			display_img = last_img_; // retrieve last image perceived
+			display_boxes = detectedBoxes.back();
+		}
+		try
+		{
+			cv_ptr = cv_bridge::toCvCopy(display_img, sensor_msgs::image_encodings::BGR8);
+		}
+		catch (cv_bridge::Exception& e)
+		{
+			ROS_ERROR("cv_bridge exception: %s", e.what());
+			return;
+		}
+		int i = 0;
+		for (auto box : display_boxes)
+		{
+			auto color = colors_[++i % colors_.size()];
+			cv::rectangle(cv_ptr->image,
+										cv::Point(box.xmin, box.ymin), cv::Point(box.xmax, box.ymax),
+										color,
+										2, cv::LINE_8);
+			cv::putText(cv_ptr->image, box.Class, cv::Point(box.xmin, box.ymin), 3, 1, color, 2);
+		}
 
-	cv::imshow("YOLOv5", cv_ptr->image);
-	cv::waitKey(3000);
+		cv::imshow("YOLOv5", cv_ptr->image);
+		cv::waitKey(30);
+	}
 }
 
 // Reference to correctly link the cpp
