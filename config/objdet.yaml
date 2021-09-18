@@ -37,7 +37,7 @@ objdet:
     display_image: true
 
     period:
-      yolo: 0.1
+      yolo: 0.01
 
     threshold:
       yolo: 0.0           # generic
